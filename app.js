@@ -1,6 +1,12 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Initialize Leaflet map
-    const map = L.map('map').setView([51.505, -0.09], 13);
+    const map = L.map('map', {
+        center: [51.505, -0.09],
+        zoom: 13,
+        minZoom: 3, // Minimum zoom level to prevent zooming out too much
+        maxZoom: 18 // Maximum zoom level for closer view
+    });
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
     }).addTo(map);
@@ -61,11 +67,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     const location = data[0];
                     const lat = location.lat;
                     const lon = location.lon;
-
-                    // Using bounding box to determine the zoom level and center
                     const bounds = location.boundingbox;
                     const zoomLevel = calculateZoomLevel(bounds);
 
+                    // Set the view to the calculated location and zoom level
                     map.setView([lat, lon], zoomLevel);
                     L.marker([lat, lon]).addTo(map).bindPopup(`<b>${place}</b>`).openPopup();
                     statusDisplay.textContent = `Found location: ${place}`;
@@ -77,19 +82,43 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.error('Geocoding error:', error);
                 statusDisplay.textContent = 'Error finding location.';
             });
+
+            function calculateZoomLevel(bounds) {
+                if (!bounds) return 13;  // Default zoom level if bounds are not available
+        
+                const [north, south, east, west] = bounds.map(Number);
+                const latDiff = north - south;
+                const lonDiff = east - west;
+        
+                const latZoom = Math.abs(160 / latDiff);
+                const lonZoom = Math.abs(360 / lonDiff);
+                console.log(latZoom,", ",lonZoom);
+                const zoom = Math.min(latZoom, lonZoom);
+                
+                console.log(zoom);
+
+                return zoom;           
+            }
     }
 
-    function calculateZoomLevel(bounds) {
-        if (!bounds) return 13;  // Default zoom level if bounds are not available
 
-        // Example logic based on bounding box
-        const [north, south, east, west] = bounds.map(Number);
-        const latDiff = north - south;
-        const lonDiff = east - west;
-
-        // Adjust zoom level based on the area
-        if (latDiff > 10 || lonDiff > 10) return 6; // Country
-        if (latDiff > 1 || lonDiff > 1) return 10; // State
-        return 13; // City
-    }
 });
+
+
+
+
+
+// function calculateZoomLevel(bounds) {
+//     if (!bounds) return 13;  // Default zoom level if bounds are not available
+
+//     // Example logic based on bounding box
+//     const [north, south, east, west] = bounds.map(Number);
+//     const latDiff = north - south;
+//     const lonDiff = east - west;
+
+    // const latZoom = Math.log2(360 / latDiff);
+    // const lonZoom = Math.log2(360 / lonDiff);
+    // const zoom = Math.min(latZoom, lonZoom)
+
+    // return Math.min(Math.abs(zoom, 13));
+// }

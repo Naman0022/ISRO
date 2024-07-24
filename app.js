@@ -57,25 +57,10 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Find and center map on the location
+    // Dummy function to find location
     function findLocation(place) {
-        const geocodingUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`;
-        
-        fetch(geocodingUrl)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    const lat = data[0].lat;
-                    const lon = data[0].lon;
-                    map.setView([lat, lon], 13);
-                    statusDisplay.textContent = `Found location: ${place}`;
-                } else {
-                    statusDisplay.textContent = 'Location not found.';
-                }
-            })
-            .catch(error => {
-                console.error('Geocoding error:', error);
-                statusDisplay.textContent = 'Error finding location.';
-            });
+        // Placeholder for finding a location and centering the map
+        alert(`Finding location: ${place}`);
+        // Implement geocoding and map centering logic here
     }
 });

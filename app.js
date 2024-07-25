@@ -1,10 +1,10 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Initialize Leaflet map
+    // Initialize Leaflet map with a world view
     const map = L.map('map', {
-        center: [51.505, -0.09],
-        zoom: 13,
-        minZoom: 3,
-        maxZoom: 18
+        center: [0, 0], // Center of the world
+        zoom: 2,        // Zoom level to show the entire world
+        minZoom: 2,     // Minimum zoom level
+        maxZoom: 18     // Maximum zoom level
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

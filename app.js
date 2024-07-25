@@ -3,8 +3,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const map = L.map('map', {
         center: [51.505, -0.09],
         zoom: 13,
-        minZoom: 3, // Minimum zoom level to prevent zooming out too much
-        maxZoom: 18 // Maximum zoom level for closer view
+        minZoom: 3,
+        maxZoom: 18
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", function() {
     const startButton = document.getElementById('startListening');
     const statusDisplay = document.getElementById('status');
     const detectedSentenceDisplay = document.getElementById('detectedSentence');
+    const header = document.getElementById('header'); // Assuming you have an element with id 'header'
+
+    let currentLayer = null; // To store the current layer to clear it later
+    let currentZoom = map.getZoom(); // Store the current zoom level
+    let lastBounds = null; // To store bounds for zooming in and out
 
     startButton.addEventListener('click', () => {
         startListening();
@@ -46,34 +51,56 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function processCommand(command) {
-        const keywords = ['find', 'search'];
-        for (const keyword of keywords) {
-            if (command.includes(keyword)) {
-                const place = command.replace(keyword, '').trim();
-                findLocation(place);
-                return;
-            }
+        if (command.includes('find') || command.includes('search') || command.includes('zoom to') || command.includes('show me')) {
+            const place = command.replace(/find|search|zoom to|show me/i, '').trim();
+            findLocation(place);
+        } else if (command.includes('zoom in')) {
+            zoomIn();
+        } else if (command.includes('zoom out')) {
+            zoomOut();
+        } else {
+            statusDisplay.textContent = 'Command not recognized.';
         }
-        statusDisplay.textContent = 'Command not recognized.';
     }
 
     function findLocation(place) {
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`;
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&addressdetails=1&limit=1`;
 
         fetch(nominatimUrl)
             .then(response => response.json())
             .then(data => {
-                if (data.length > 0) {
+                if (data && data.length > 0) {
                     const location = data[0];
                     const lat = location.lat;
                     const lon = location.lon;
                     const bounds = location.boundingbox;
-                    const zoomLevel = calculateZoomLevel(bounds);
+                    const displayName = location.display_name;
+                    const stateOrProvince = location.address.state || location.address.province || location.address.county || location.address.region || '';
+                    const country = location.address.country || '';
 
-                    // Set the view to the calculated location and zoom level
-                    map.setView([lat, lon], zoomLevel);
-                    L.marker([lat, lon]).addTo(map).bindPopup(`<b>${place}</b>`).openPopup();
-                    statusDisplay.textContent = `Found location: ${place}`;
+                    // Clear previous layer if it exists
+                    if (currentLayer) {
+                        map.removeLayer(currentLayer);
+                    }
+
+                    if (bounds) {
+                        const [north, south, east, west] = bounds.map(Number);
+                        lastBounds = L.latLngBounds([
+                            [south, west],
+                            [north, east]
+                        ]);
+
+                        // Set the view to fit the bounds and add a marker
+                        map.fitBounds(lastBounds);
+                        currentZoom = map.getZoom(); // Update current zoom level
+                        const popupContent = `<b>${place}</b><br>${stateOrProvince ? `<i>${stateOrProvince}, ${country}</i>` : `<i>${country}</i>`}`;
+                        const marker = L.marker([lat, lon]).addTo(map).bindPopup(popupContent).openPopup();
+
+                        statusDisplay.textContent = `Found location: ${place}`;
+                        header.textContent = `Country: ${country}`;
+                    } else {
+                        statusDisplay.textContent = 'No boundary information available.';
+                    }
                 } else {
                     statusDisplay.textContent = 'Location not found.';
                 }
@@ -82,43 +109,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.error('Geocoding error:', error);
                 statusDisplay.textContent = 'Error finding location.';
             });
-
-            function calculateZoomLevel(bounds) {
-                if (!bounds) return 13;  // Default zoom level if bounds are not available
-        
-                const [north, south, east, west] = bounds.map(Number);
-                const latDiff = north - south;
-                const lonDiff = east - west;
-        
-                const latZoom = Math.abs(160 / latDiff);
-                const lonZoom = Math.abs(360 / lonDiff);
-                console.log(latZoom,", ",lonZoom);
-                const zoom = Math.min(latZoom, lonZoom);
-                
-                console.log(zoom);
-
-                return zoom;           
-            }
     }
 
+    function zoomIn() {
+        if (lastBounds) {
+            currentZoom = Math.min(currentZoom + 1, map.getMaxZoom());
+            map.setZoom(currentZoom);
+        }
+    }
 
+    function zoomOut() {
+        if (lastBounds) {
+            currentZoom = Math.max(currentZoom - 1, map.getMinZoom());
+            map.setZoom(currentZoom);
+        }
+    }
 });
-
-
-
-
-
-// function calculateZoomLevel(bounds) {
-//     if (!bounds) return 13;  // Default zoom level if bounds are not available
-
-//     // Example logic based on bounding box
-//     const [north, south, east, west] = bounds.map(Number);
-//     const latDiff = north - south;
-//     const lonDiff = east - west;
-
-    // const latZoom = Math.log2(360 / latDiff);
-    // const lonZoom = Math.log2(360 / lonDiff);
-    // const zoom = Math.min(latZoom, lonZoom)
-
-    // return Math.min(Math.abs(zoom, 13));
-// }
